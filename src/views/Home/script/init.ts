@@ -1,20 +1,18 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min'
-import { OimoPhysics } from 'three/examples/jsm/physics/OimoPhysics'
 import Torus from './initTorus'
-import initLight from './initLight'
 import Robot from './initRobot'
 import Game from './initGame'
 import Drop from './initDrop'
 import Cube from './initCube'
 import RaycasterMesh from './initRaycast'
+import Stats from 'three/examples/jsm/libs/stats.module.js'
 
 export default class Three {
   scene: THREE.Scene | null = null
   camera: THREE.PerspectiveCamera | null = null
   renderer: THREE.WebGLRenderer | null = null
-  ambientLight: THREE.AmbientLight | null = null
   mesh: THREE.Mesh | null = null
   axesHelper: THREE.AxesHelper | null = null
   controls: OrbitControls | null = null
@@ -23,13 +21,11 @@ export default class Three {
 
   container: HTMLElement
 
-  gui: GUI = new GUI()
-
-
+  gui: GUI | null = null
+  stats: Stats | null = null
 
   hesLight: THREE.HemisphereLight | null = null
-
-
+  ambientLight: THREE.AmbientLight | null = null
 
   constructor(container:HTMLElement) {
     this.container = container
@@ -52,8 +48,6 @@ export default class Three {
 
     this.initFloor()
 
-    initLight.call(this)
-
     // 控制器 需在相机之后创建
     this.initControls()
     // this.initGUI()
@@ -61,11 +55,11 @@ export default class Three {
 
 
 
-    const torus = new Torus(this)
+    // const torus = new Torus(this)
     // const raycast = new RaycasterMesh(this)
     // const cube = new Cube(this)
     // const dorp = new Drop(this)
-    // const robot = new Robot(this)
+    const robot = new Robot(this)
     // const game = new Game(this)
   }
 
@@ -87,14 +81,14 @@ export default class Three {
     // 参数三四 轴向视距 看到的最近和最远的距离
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     // 设定相机原点
-    this.camera.position.set(-5, 3, 10)
-    this.camera.lookAt(0, 0, 0)
+    // this.camera.position.set(-5, 3, 10)
+    // this.camera.lookAt(0, 0, 0)
 
 
   }
 
   protected initRenderer() {  // 创建渲染器
-    this.renderer = new THREE.WebGLRenderer()
+    this.renderer = new THREE.WebGLRenderer({ antialias: true })
 
     // 优化边缘细节
     this.renderer.setPixelRatio(window.devicePixelRatio)
@@ -111,13 +105,21 @@ export default class Three {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
 
     this.container.appendChild(this.renderer.domElement)  // canvas挂载
+
+    this.initStats()
+  }
+
+  protected initStats() {
+    this.stats = Stats()
+    this.stats.domElement.style.position = 'absolute'
+    this.stats.domElement.style.top = '0px'
+    this.container.appendChild(this.stats.domElement)
   }
 
   protected render() {  // 进行渲染
     if (this.renderer && this.scene && this.camera) {
       this.renderer.render(this.scene, this.camera)
-
-      this.controls?.update()
+      this.stats!.update()
 
       // 下一帧渲染调用 类似nextTick
       // 调用速度与浏览器保持一致 一般每秒60帧
@@ -155,5 +157,17 @@ export default class Three {
     CameraFolder.close()
 
     this.gui.close()
+  }
+
+  public initHemisphereLight() { // 环境光
+    this.hesLight = new THREE.HemisphereLight(0x4488bb, 0x002244, 0.5)
+    // this.hesLight.intensity = 0.3
+    this.hesLight.position.set(2, 1, 1)
+    this.scene?.add(this.hesLight)
+  }
+
+  public initAmbientLight(this:Three) {  // 背景光
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.2)
+    this.scene?.add(this.ambientLight)
   }
 }
