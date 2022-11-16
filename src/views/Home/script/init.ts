@@ -7,6 +7,7 @@ import Game from './initGame'
 import Drop from './initDrop'
 import Cube from './initCube'
 import RaycasterMesh from './initRaycast'
+import Cannon from './cannon'
 import Stats from 'three/examples/jsm/libs/stats.module.js'
 
 export default class Three {
@@ -61,6 +62,7 @@ export default class Three {
     // const dorp = new Drop(this)
     const robot = new Robot(this)
     // const game = new Game(this)
+    // const cannon = new Cannon(this)
   }
 
   protected initFloor() { // 生成地板

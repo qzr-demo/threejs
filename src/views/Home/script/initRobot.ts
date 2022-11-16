@@ -2,6 +2,11 @@
 import * as THREE from 'three'
 import Three from './init'
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader'
+import { Clock, Vector3 } from 'three'
+
+import { Octree } from 'three/examples/jsm/math/Octree.js'
+import { OctreeHelper } from 'three/examples/jsm/helpers/OctreeHelper.js'
+
 const clock = new THREE.Clock()
 
 class Robot {
@@ -13,6 +18,15 @@ class Robot {
 
   activeAction: THREE.AnimationAction | null = null
   clip: THREE.AnimationClip | null = null
+
+  velocity: Vector3 = new THREE.Vector3() // 速度
+  direction: Vector3 = new THREE.Vector3() // 方向
+  GRAVITY: number = 30 // 重力
+  SPEED: number = 30 // 移速
+
+  trans = new THREE.Matrix4()
+
+  onFloor: boolean = true
 
   keyStates: {
     KeyW: boolean
@@ -34,7 +48,7 @@ class Robot {
 
   public async init() {
     await this.load()
-    this.initAnimation()
+    // this.initAnimation()
     this.initEvent()
   }
 
@@ -117,6 +131,17 @@ class Robot {
   }
 
   private initEvent() {
+    // document.addEventListener('mousedown', (e) => {
+    //   document.body.requestPointerLock()
+    // })
+
+    // document.addEventListener('mousemove', (e) => {
+    //   if (document.pointerLockElement === document.body) {
+    //     this.ctx.ctx.camera!.rotation.y -= e.movementX / 500 // x轴移动 视角绕y轴旋转
+    //     this.ctx.ctx.camera!.rotation.x -= e.movementY / 500
+    //   }
+    // })
+
     document.addEventListener('keydown', (e) => {
       this.keyStates[e.code] = true
     })
@@ -126,6 +151,54 @@ class Robot {
     })
   }
 
+  public handleControls(deltaTime: number) {
+    const speedDelta = deltaTime * (this.onFloor ? 25 : this.SPEED) // 每个时间点速度的改变值
+
+    if (this.keyStates['KeyW']) {
+      this.velocity.add(this.getForwardVector().multiplyScalar(speedDelta))
+    }
+    if (this.keyStates['KeyS']) {
+      this.velocity.add(this.getForwardVector().multiplyScalar(-speedDelta))
+    }
+    if (this.keyStates['KeyA']) {
+      this.velocity.add(this.getSideVector().multiplyScalar(-speedDelta))
+    }
+    if (this.keyStates['KeyD']) {
+      this.velocity.add(this.getSideVector().multiplyScalar(speedDelta))
+    }
+  }
+
+  private getForwardVector() {
+    this.ctx.ctx.camera?.getWorldDirection(this.direction) // player的方向绑定camera的方向
+    this.direction.y = 0 // wasd不改变y方向
+    this.direction.normalize()
+    return this.direction
+  }
+
+  private getSideVector() {
+    this.ctx.ctx.camera?.getWorldDirection(this.direction) // player的方向绑定camera的方向
+    this.direction.y = 0 // wasd不改变y方向
+    this.direction.normalize()
+    this.direction.cross(this.ctx.ctx.camera!.up) // 从前后计算左右的方向
+    return this.direction
+  }
+
+  public updatePlayer(deltaTime: number) {
+    // 通过速度的变化更新位移 并设置camera的位置
+    let damping = Math.exp(-4 * deltaTime) - 1 // 阻力 让人物停止
+    if (!this.onFloor) {
+      this.velocity.y -= this.GRAVITY * deltaTime // 空中自由运动
+      damping *= 0.1 // 空中阻力变小十倍
+    }
+
+    this.velocity.addScaledVector(this.velocity, damping) // 计算人物速度
+    const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime) // 计算位移
+    this.trans.setPosition(deltaPosition)
+    this.robot!.applyMatrix4(this.trans) // 进行位移
+
+    // this.playerCollisions() // 位移后进行碰撞检查
+    this.ctx.ctx.camera?.matrix.copy(this.trans)
+  }
 }
 
 export default class World {
@@ -134,6 +207,7 @@ export default class World {
   scene: GLTF | null = null
 
   robot: Robot = new Robot(this)
+  sceneOctree: Octree = new Octree()
 
   constructor(ctx:Three) {
     this.ctx = ctx
@@ -144,8 +218,6 @@ export default class World {
   private async init() {
     await this.loadScene()
     await this.robot.init()
-
-    this.scene!.scene.position.y = 4.9
 
     this.initCamera()
     this.initControls()
@@ -162,7 +234,9 @@ export default class World {
   private loadScene() {
     const loader = new GLTFLoader()
     return new Promise((resolve, reject) => {
-      loader.load('/scene/AA.glb', gltf => {
+      loader.load('/scene/youPZ2.glb', gltf => {
+      // loader.load('/scene/wuPZ.glb', gltf => {
+      // loader.load('/scene/youPZ/youPZ.gltf', gltf => {
       // loader.load('/collision-world.glb', gltf => {
         gltf.scene.castShadow = true
         gltf.scene.receiveShadow = true
@@ -174,7 +248,18 @@ export default class World {
             item.castShadow = true
             item.receiveShadow = true
           }
+
+          if (item.name === 'PZ') {
+            item.visible = false
+          }
         })
+
+        const group = new THREE.Group()
+        group.add(gltf.scene.children[1])
+        console.log('thisssssss', gltf)
+        this.sceneOctree.fromGraphNode(group)
+        const helper = new OctreeHelper(this.sceneOctree, 0x666666)
+        this.ctx.scene?.add(helper)
 
         this.scene = gltf
         resolve(gltf)
@@ -185,6 +270,9 @@ export default class World {
   private animate() {
     const deltaTime = Math.min(0.05, clock.getDelta()) // 避免delta为0 最小取0.05
 
+    this.robot.handleControls(deltaTime)
+    this.robot.updatePlayer(deltaTime)
+
     this.robot!.mixer?.update(deltaTime)
     // 相机跟随
     const p = this.robot!.robot!.position
@@ -194,6 +282,9 @@ export default class World {
   }
 
   private initControls() {
+    // this.ctx.camera!.position.set(0, 0, 0)
+    // this.ctx.camera!.rotation.order = 'YXZ'
+
     // 跟随距离超出距离 自动跟随
     this.ctx.controls!.maxDistance = 20
     this.ctx.controls!.minDistance = 10
