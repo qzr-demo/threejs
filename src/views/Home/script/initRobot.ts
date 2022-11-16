@@ -1,57 +1,61 @@
+/* eslint-disable no-use-before-define */
 import * as THREE from 'three'
 import Three from './init'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
-
+import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader'
 const clock = new THREE.Clock()
 
-export default class Robot {
-  ctx:Three
-  upVector = new THREE.Vector3(0, 1, 0)
-  step = 0.1
+class Robot {
+  ctx: World
   robot: THREE.Group | null = null
-  man: THREE.Group | null = null
-  tempVector = new THREE.Vector3()
   clips: THREE.AnimationClip[] | null = null
   mixer: THREE.AnimationMixer | null = null
   clipsIndex: number = -1
-  keys: string[] = []
-  activeAction: THREE.AnimationAction | null = null
 
+  activeAction: THREE.AnimationAction | null = null
   clip: THREE.AnimationClip | null = null
 
-  constructor(ctx:Three) {
+  keyStates: {
+    KeyW: boolean
+    KeyS: boolean
+    KeyA: boolean
+    KeyD: boolean
+    Space: boolean
+  } = {
+      KeyW: false,
+      KeyS: false,
+      KeyA: false,
+      KeyD: false,
+      Space: false
+    }
+
+  constructor(ctx:World) {
     this.ctx = ctx
-
-    this.ctx.camera!.position.set(-5, 3, 10)
-    this.ctx.camera!.lookAt(0, 0, 0)
-
-    this.load()
-    this.move()
-    this.ctx.initHemisphereLight()
-    this.ctx.initAmbientLight()
-
-
-
   }
 
-  private load() {
+  public async init() {
+    await this.load()
+    this.initAnimation()
+    this.initEvent()
+  }
+
+  private async load() {
+    await this.loadRobot()
+  }
+
+  private loadRobot() {
     const loader = new GLTFLoader()
-    loader.load('/RobotExpressive.glb', gltf => {
-      console.log(gltf)
-      this.robot = gltf.scene
-      this.clips = gltf.animations
+    return new Promise((resolve, reject) => {
+      loader.load('/RobotExpressive.glb', gltf => {
+        this.robot = gltf.scene
+        this.clips = gltf.animations
 
-      this.ctx.scene!.add(this.robot)
+        this.robot.castShadow = true
+        this.robot.receiveShadow = true
 
-      this.changeAction(2)
-      this.render()
-      this.initControls()
-
-      this.initAnimation()
-
-      setTimeout(() => {
-        this.enableAnimation()
-      }, 1000)
+        this.ctx.ctx.scene!.add(this.robot)
+        this.changeAction(2)
+        resolve(gltf)
+      })
     })
   }
 
@@ -68,65 +72,6 @@ export default class Robot {
       .setEffectiveWeight(1)
       .fadeIn(0.2)
       .play()
-  }
-
-  private move() {
-    window.addEventListener('keydown', e => {
-      if (e.key.match(/^(w|a|s|d)$/i)) {
-        !this.keys.includes(e.key) && this.keys.push(e.key)
-        if (this.keys.length !== 0) {
-          this.changeAction(6)
-        }
-      }
-    })
-
-    window.addEventListener('keyup', e => {
-      this.keys.splice(this.keys.indexOf(e.key), 1)
-      if (this.keys.length === 0) {
-        this.changeAction(2)
-      }
-    })
-  }
-
-  private animate() {
-    const { robot, keys } = this
-    if (robot) {
-      const p = robot.position
-      if (keys.length) {
-        if (keys.includes('w')) {
-          robot.translateZ(this.step)
-        }
-        if (keys.includes('s')) {
-          robot.translateZ(-this.step)
-        }
-        if (keys.includes('a')) {
-          robot.rotateY(THREE.MathUtils.degToRad(1))
-        }
-        if (keys.includes('d')) {
-          robot.rotateY(-THREE.MathUtils.degToRad(1))
-        }
-        // 相机跟随
-        this.ctx.controls?.target.copy(p)
-        this.ctx.controls?.update()
-      }
-
-    }
-
-  }
-
-  private render() {
-    requestAnimationFrame(() => {
-      const delata = clock.getDelta()
-      this.render()
-      this.animate()
-      this.mixer?.update(delata)
-    })
-  }
-
-  private initControls() {
-    // 跟随距离超出距离 自动跟随
-    this.ctx.controls!.maxDistance = 20
-    this.ctx.controls!.minDistance = 10
   }
 
   private initAnimation() {
@@ -151,6 +96,10 @@ export default class Robot {
       5,
       [positionKF]
     )
+
+    setTimeout(() => {
+      this.enableAnimation()
+    }, 1000)
   }
 
   private enableAnimation() {
@@ -166,5 +115,105 @@ export default class Robot {
         this.mixer!.stopAllAction()
     }, 10000)
   }
+
+  private initEvent() {
+    document.addEventListener('keydown', (e) => {
+      this.keyStates[e.code] = true
+    })
+
+    document.addEventListener('keyup', (e) => {
+      this.keyStates[e.code] = false
+    })
+  }
+
 }
 
+export default class World {
+  ctx:Three
+  dirLight: THREE.DirectionalLight | null = null
+  scene: GLTF | null = null
+
+  robot: Robot = new Robot(this)
+
+  constructor(ctx:Three) {
+    this.ctx = ctx
+
+    this.init()
+  }
+
+  private async init() {
+    await this.loadScene()
+    await this.robot.init()
+
+    this.scene!.scene.position.y = 4.9
+
+    this.initCamera()
+    this.initControls()
+    this.initDirLight()
+    this.animate()
+
+  }
+
+  initCamera() {
+    this.ctx.camera!.position.set(-5, 3, 10)
+    this.ctx.camera!.lookAt(0, 0, 0)
+  }
+
+  private loadScene() {
+    const loader = new GLTFLoader()
+    return new Promise((resolve, reject) => {
+      loader.load('/scene/AA.glb', gltf => {
+      // loader.load('/collision-world.glb', gltf => {
+        gltf.scene.castShadow = true
+        gltf.scene.receiveShadow = true
+
+        this.ctx.scene!.add(gltf.scene)
+
+        gltf.scene.traverse((item:any) => {
+          if (item.isMesh) {
+            item.castShadow = true
+            item.receiveShadow = true
+          }
+        })
+
+        this.scene = gltf
+        resolve(gltf)
+      })
+    })
+  }
+
+  private animate() {
+    const deltaTime = Math.min(0.05, clock.getDelta()) // 避免delta为0 最小取0.05
+
+    this.robot!.mixer?.update(deltaTime)
+    // 相机跟随
+    const p = this.robot!.robot!.position
+    this.ctx.controls?.target.copy(p)
+    this.ctx.controls?.update()
+    requestAnimationFrame(this.animate.bind(this))
+  }
+
+  private initControls() {
+    // 跟随距离超出距离 自动跟随
+    this.ctx.controls!.maxDistance = 20
+    this.ctx.controls!.minDistance = 10
+  }
+
+  private initDirLight() { // 平行光 太阳光
+
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 0.8)
+    this.dirLight.position.set(0, 25, 20)
+    this.dirLight.castShadow = true
+    this.dirLight.shadow.camera.near = 0.01
+    this.dirLight.shadow.camera.far = 500
+    this.dirLight.shadow.camera.right = 30
+    this.dirLight.shadow.camera.left = -30
+    this.dirLight.shadow.camera.top = 30
+    this.dirLight.shadow.camera.bottom = -30
+    this.dirLight.shadow.mapSize.width = 1024
+    this.dirLight.shadow.mapSize.height = 1024
+    this.dirLight.shadow.radius = 4
+    this.dirLight.shadow.bias = -0.00006
+    this.ctx.scene?.add(this.dirLight)
+  }
+}

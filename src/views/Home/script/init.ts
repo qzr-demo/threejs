@@ -46,7 +46,7 @@ export default class Three {
 
     this.initEvent()
 
-    this.initFloor()
+    // this.initFloor()
 
     // 控制器 需在相机之后创建
     this.initControls()
