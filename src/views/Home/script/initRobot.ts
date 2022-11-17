@@ -6,6 +6,7 @@ import { Clock, Vector3 } from 'three'
 
 import { Octree } from 'three/examples/jsm/math/Octree.js'
 import { OctreeHelper } from 'three/examples/jsm/helpers/OctreeHelper.js'
+import { Capsule } from 'three/examples/jsm/math/Capsule.js'
 
 const clock = new THREE.Clock()
 
@@ -27,6 +28,8 @@ class Robot {
   trans = new THREE.Matrix4()
 
   onFloor: boolean = true
+
+  geometry = new Capsule(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0), 1.5)
 
   keyStates: {
     KeyW: boolean
@@ -67,6 +70,7 @@ class Robot {
         this.robot.receiveShadow = true
 
         this.ctx.ctx.scene!.add(this.robot)
+
         this.changeAction(2)
         resolve(gltf)
       })
@@ -153,18 +157,29 @@ class Robot {
 
   public handleControls(deltaTime: number) {
     const speedDelta = deltaTime * (this.onFloor ? 25 : this.SPEED) // 每个时间点速度的改变值
+    const rotateAngle = Math.PI / 2
 
     if (this.keyStates['KeyW']) {
+      this.mixer!.clipAction(this.clips![10]).play()
       this.velocity.add(this.getForwardVector().multiplyScalar(speedDelta))
+    } else {
+      this.mixer!.stopAllAction()
     }
     if (this.keyStates['KeyS']) {
       this.velocity.add(this.getForwardVector().multiplyScalar(-speedDelta))
+      this.robot!.lookAt(this.ctx.ctx.camera!.position.clone().setY(0).setZ(0))
+      // this.robot!.rotateOnWorldAxis(this.direction, rotateAngle)
+      // this.ctx.ctx.camera?.getWorldDirection()
     }
     if (this.keyStates['KeyA']) {
       this.velocity.add(this.getSideVector().multiplyScalar(-speedDelta))
     }
     if (this.keyStates['KeyD']) {
       this.velocity.add(this.getSideVector().multiplyScalar(speedDelta))
+    }
+    if (this.keyStates['Space'] && this.onFloor) {
+      this.mixer!.clipAction(this.clips![3]).setLoop(THREE.LoopPingPong, 1).play().reset()
+      this.velocity.y = 20
     }
   }
 
@@ -193,11 +208,28 @@ class Robot {
 
     this.velocity.addScaledVector(this.velocity, damping) // 计算人物速度
     const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime) // 计算位移
-    this.trans.setPosition(deltaPosition)
-    this.robot!.applyMatrix4(this.trans) // 进行位移
 
-    // this.playerCollisions() // 位移后进行碰撞检查
+    this.geometry.translate(deltaPosition)
+    // this.trans.setPosition(deltaPosition)
+    // this.robot!.applyMatrix4(this.trans) // 进行位移
+
+    this.playerCollisions() // 位移后进行碰撞检查
     this.ctx.ctx.camera?.matrix.copy(this.trans)
+  }
+
+  private playerCollisions() {
+    // 检查碰撞
+    // 无碰撞返回false 有碰撞返回碰撞点坐标
+    const result = this.ctx.sceneOctree.capsuleIntersect(this.geometry)
+    if (result) {
+      this.onFloor = result.normal.y > 0 // y轴无碰撞 则不再地板上
+      if (!this.onFloor) {
+        this.velocity.addScaledVector(result.normal, -result.normal.dot(this.velocity))
+      }
+      this.geometry.translate(result.normal.multiplyScalar(result.depth))
+    } else {
+      this.onFloor = false
+    }
   }
 }
 
@@ -234,15 +266,17 @@ export default class World {
   private loadScene() {
     const loader = new GLTFLoader()
     return new Promise((resolve, reject) => {
-      loader.load('/scene/youPZ2.glb', gltf => {
+      // loader.load('/scene/youPZ.glb', gltf => {
       // loader.load('/scene/wuPZ.glb', gltf => {
-      // loader.load('/scene/youPZ/youPZ.gltf', gltf => {
+      loader.load('/scene/youPZ/youPZ.gltf', gltf => {
       // loader.load('/collision-world.glb', gltf => {
         gltf.scene.castShadow = true
         gltf.scene.receiveShadow = true
 
         this.ctx.scene!.add(gltf.scene)
 
+        let group = new THREE.Group()
+        console.log(gltf)
         gltf.scene.traverse((item:any) => {
           if (item.isMesh) {
             item.castShadow = true
@@ -250,13 +284,12 @@ export default class World {
           }
 
           if (item.name === 'PZ') {
-            item.visible = false
+            console.log(item)
+            group.add(item.clone())
+            // item.visible = false
           }
         })
 
-        const group = new THREE.Group()
-        group.add(gltf.scene.children[1])
-        console.log('thisssssss', gltf)
         this.sceneOctree.fromGraphNode(group)
         const helper = new OctreeHelper(this.sceneOctree, 0x666666)
         this.ctx.scene?.add(helper)
@@ -272,6 +305,12 @@ export default class World {
 
     this.robot.handleControls(deltaTime)
     this.robot.updatePlayer(deltaTime)
+
+    this.robot.robot!.position.copy(this.robot.geometry.start.clone()).add(new Vector3(0, -1.5, 0))
+    // this.robot.robot!.position.setY(0)
+
+    // this.robot.robot!.position.copy(this.robot.geometry.start)
+    // this.robot.robot!.quaternion.copy(this.robot.geometry.end)
 
     this.robot!.mixer?.update(deltaTime)
     // 相机跟随

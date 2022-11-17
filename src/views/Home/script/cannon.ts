@@ -5,6 +5,8 @@ import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader'
 import { Clock, Vector3 } from 'three'
 
 import * as Cannon from 'cannon-es'
+import { threeToCannon, ShapeType } from 'three-to-cannon'
+import CannonDebugger from 'cannon-es-debugger'
 
 const clock = new THREE.Clock()
 
@@ -23,9 +25,8 @@ class Robot {
   GRAVITY: number = 30 // 重力
   SPEED: number = 30 // 移速
 
-  trans = new THREE.Matrix4()
-
   onFloor: boolean = true
+  cannonbody: any
 
   keyStates: {
     KeyW: boolean
@@ -49,6 +50,8 @@ class Robot {
     await this.load()
     // this.initAnimation()
     this.initEvent()
+
+    this.initCannon()
   }
 
   private async load() {
@@ -66,6 +69,7 @@ class Robot {
         this.robot.receiveShadow = true
 
         this.ctx.ctx.scene!.add(this.robot)
+
         resolve(gltf)
       })
     })
@@ -90,13 +94,18 @@ class Robot {
     document.addEventListener('keyup', (e) => {
       this.keyStates[e.code] = false
     })
+
+    if (this.keyStates['Space']) {
+      this.velocity.y = 15
+    }
   }
 
   public handleControls(deltaTime: number) {
-    const speedDelta = deltaTime * (this.onFloor ? 25 : this.SPEED) // 每个时间点速度的改变值
+    const speedDelta = deltaTime * this.SPEED // 每个时间点速度的改变值
 
     if (this.keyStates['KeyW']) {
       this.velocity.add(this.getForwardVector().multiplyScalar(speedDelta))
+      console.log(this.velocity, speedDelta)
     }
     if (this.keyStates['KeyS']) {
       this.velocity.add(this.getForwardVector().multiplyScalar(-speedDelta))
@@ -134,11 +143,28 @@ class Robot {
 
     this.velocity.addScaledVector(this.velocity, damping) // 计算人物速度
     const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime) // 计算位移
-    this.trans.setPosition(deltaPosition)
-    this.robot!.applyMatrix4(this.trans) // 进行位移
 
-    // this.playerCollisions() // 位移后进行碰撞检查
-    this.ctx.ctx.camera?.matrix.copy(this.trans)
+    // this.robot!.position.add(deltaPosition) // 进行位移
+    // this.cannonbody.position.vadd(deltaPosition)
+    this.cannonbody.position.copy(this.cannonbody.position.vadd(deltaPosition))
+  }
+
+  initCannon() {
+    const cannonPz = threeToCannon(this.robot!.clone())
+    this.cannonbody = new Cannon.Body({
+      mass: 1,
+      material: new Cannon.Material(),
+    })
+    console.log('this', cannonPz?.offset)
+    this.cannonbody.addShape(cannonPz?.shape, cannonPz?.offset, cannonPz?.orientation)
+
+    this.cannonbody.position.y = 3
+    this.ctx.cannonWorld.addBody(this.cannonbody)
+
+    this.ctx.MeshBodyToUpdate.push({
+      body: this.cannonbody,
+      mesh: this.robot,
+    })
   }
 }
 
@@ -152,6 +178,8 @@ export default class World {
   cannonWorld: Cannon.World = new Cannon.World()
   MeshBodyToUpdate: any[] = []
 
+  cannonDebugger:any
+
   constructor(ctx:Three) {
     this.ctx = ctx
 
@@ -159,17 +187,18 @@ export default class World {
   }
 
   private async init() {
-    // await this.loadScene()
-    // await this.robot.init()
+    await this.loadScene()
+    await this.robot.init()
 
     this.initCamera()
     this.initControls()
     this.initDirLight()
-    this.animate()
 
     this.initCannon()
-    this.createPlane()
-    this.createSphere()
+    // this.createPlane()
+    // this.createSphere()
+
+    this.animate()
   }
 
   initCamera() {
@@ -180,6 +209,7 @@ export default class World {
   private loadScene() {
     const loader = new GLTFLoader()
     return new Promise((resolve, reject) => {
+      // loader.load('/scene/youPZ/youPZ.gltf', gltf => {
       loader.load('/scene/youPZ.glb', gltf => {
         gltf.scene.castShadow = true
         gltf.scene.receiveShadow = true
@@ -191,7 +221,25 @@ export default class World {
             item.castShadow = true
             item.receiveShadow = true
           }
+
+          if (item.name === 'PZ') {
+            const cannonPz = threeToCannon(item.clone(), { type: ShapeType.BOX })
+            const body = new Cannon.Body({
+              mass: 0,
+              material: new Cannon.Material(),
+              position: new Cannon.Vec3(-13, 0, 0)
+            })
+            body.addShape(cannonPz!.shape, cannonPz?.offset, cannonPz?.orientation)
+            this.cannonWorld.addBody(body)
+          }
         })
+        // const cannonPz = threeToCannon(gltf.scene, { type: ShapeType.MESH })
+        // const body = new Cannon.Body({
+        //   mass: 0,
+        //   material: new Cannon.Material(),
+        // })
+        // body.addShape(cannonPz!.shape, cannonPz?.offset, cannonPz?.orientation)
+        // this.cannonWorld.addBody(body)
 
         this.scene = gltf
         resolve(gltf)
@@ -204,13 +252,16 @@ export default class World {
 
     this.cannonWorld.step(1.0 / 60.0)
 
+    this.cannonDebugger.update()
+
+    this.robot.handleControls(deltaTime)
+    this.robot.updatePlayer(deltaTime)
+
     for (const object of this.MeshBodyToUpdate) {
       object.mesh.position.copy(object.body.position)
       object.mesh.quaternion.copy(object.body.quaternion)
     }
 
-    // this.robot.handleControls(deltaTime)
-    // this.robot.updatePlayer(deltaTime)
 
     // this.robot!.mixer?.update(deltaTime)
     // 相机跟随
@@ -261,6 +312,8 @@ export default class World {
     )
 
     this.cannonWorld.addContactMaterial(cannonDefaultCantactMaterial)
+
+    this.cannonDebugger = CannonDebugger(this.ctx.scene!, this.cannonWorld)
   }
 
   private createPlane() {

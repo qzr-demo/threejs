@@ -21,6 +21,7 @@ specifiers:
   axios-jsonp: ^1.0.4
   axios-retry: ^3.3.1
   cannon-es: ^0.20.0
+  cannon-es-debugger: ^1.0.0
   commitizen: ^4.2.5
   cz-conventional-changelog: ^3.3.0
   cz-customizable: ^6.9.1
@@ -41,6 +42,7 @@ specifiers:
   sass: ^1.53.0
   stylus: ^0.58.1
   three: ^0.146.0
+  three-to-cannon: ^4.3.0
   ts-jest: ^28.0.7
   typescript: ^4.7.4
   unplugin-auto-import: ^0.9.4
@@ -60,12 +62,14 @@ dependencies:
   axios-jsonp: 1.0.4
   axios-retry: 3.3.1
   cannon-es: 0.20.0
+  cannon-es-debugger: 1.0.0_rguwal7yeaxlkhgopxdmolvhgq
   mockjs: 1.1.0
   pinia: 2.0.16_j6bzmzd4ujpabbp5objtwxyjp4
   pinia-plugin-persist: 1.0.0_pinia@2.0.16+vue@3.2.37
   postcss: 8.4.14
   qs: 6.11.0
   three: 0.146.0
+  three-to-cannon: 4.3.0_fvhdadnfkpnbczfjcdsu4xhuuu
   vite-plugin-svg-icons: 2.0.1_vite@3.0.2
   vue: 3.2.37
   vue-router: 4.1.2_vue@3.2.37
@@ -1941,6 +1945,21 @@ packages:
   /caniuse-lite/1.0.30001368:
     resolution: {integrity: sha512-wgfRYa9DenEomLG/SdWgQxpIyvdtH3NW8Vq+tB6AwR9e56iOIcu1im5F/wNdDf04XlKHXqIx4N8Jo0PemeBenQ==}
     dev: true
+
+  /cannon-es-debugger/1.0.0_rguwal7yeaxlkhgopxdmolvhgq:
+    resolution: {integrity: sha512-sE9lDOBAYFKlh+0w+cvWKwUhJef8HYnUSVPWPL0jD15MAuVRQKno4QYZSGxgOoJkMR3mQqxL4bxys2b3RSWH8g==}
+    peerDependencies:
+      cannon-es: 0.x
+      three: 0.x
+      typescript: '>=3.8'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      cannon-es: 0.20.0
+      three: 0.146.0
+      typescript: 4.7.4
+    dev: false
 
   /cannon-es/0.20.0:
     resolution: {integrity: sha512-eZhWTZIkFOnMAJOgfXJa9+b3kVlvG+FX4mdkpePev/w/rP5V8NRquGyEozcjPfEoXUlb+p7d9SUcmDSn14prOA==}
@@ -6342,6 +6361,17 @@ packages:
   /text-table/0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}
     dev: true
+
+  /three-to-cannon/4.3.0_fvhdadnfkpnbczfjcdsu4xhuuu:
+    resolution: {integrity: sha512-YjGzQwSny4cmRT5MMeVpkrhbcSHxVx/xO8sJYQKln51S/5+2PsEkP5G9YoRKzoBcJFIA9+IkFoqGb9WmAlEe3w==}
+    peerDependencies:
+      cannon-es: 0.x.x
+      three: '>=0.125.x'
+    dependencies:
+      '@types/three': 0.146.0
+      cannon-es: 0.20.0
+      three: 0.146.0
+    dev: false
 
   /three/0.146.0:
     resolution: {integrity: sha512-1lvNfLezN6OJ9NaFAhfX4sm5e9YCzHtaRgZ1+B4C+Hv6TibRMsuBAM5/wVKzxjpYIlMymvgsHEFrrigEfXnb2A==}

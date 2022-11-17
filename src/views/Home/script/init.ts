@@ -60,8 +60,8 @@ export default class Three {
     // const raycast = new RaycasterMesh(this)
     // const cube = new Cube(this)
     // const dorp = new Drop(this)
-    const robot = new Robot(this)
     // const game = new Game(this)
+    const robot = new Robot(this)
     // const cannon = new Cannon(this)
   }
 
