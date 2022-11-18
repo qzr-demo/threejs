@@ -9,6 +9,8 @@ import Cube from './initCube'
 import RaycasterMesh from './initRaycast'
 import Cannon from './cannon'
 import Stats from 'three/examples/jsm/libs/stats.module.js'
+import FirstPerson from './firstPerson'
+import ThirdPerson from './thirdPerson'
 
 export default class Three {
   scene: THREE.Scene | null = null
@@ -50,7 +52,7 @@ export default class Three {
     // this.initFloor()
 
     // 控制器 需在相机之后创建
-    this.initControls()
+    // this.initControls()
     // this.initGUI()
     this.initAxesHelper()
 
@@ -61,8 +63,10 @@ export default class Three {
     // const cube = new Cube(this)
     // const dorp = new Drop(this)
     // const game = new Game(this)
-    const robot = new Robot(this)
+    // const robot = new Robot(this)
     // const cannon = new Cannon(this)
+    const firstPerson = new FirstPerson(this)
+    // const thirdPerson = new ThirdPerson(this)
   }
 
   protected initFloor() { // 生成地板

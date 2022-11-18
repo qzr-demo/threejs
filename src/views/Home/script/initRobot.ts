@@ -45,6 +45,8 @@ class Robot {
       Space: false
     }
 
+  lookDirection: number = 8
+
   constructor(ctx:World) {
     this.ctx = ctx
   }
@@ -157,7 +159,6 @@ class Robot {
 
   public handleControls(deltaTime: number) {
     const speedDelta = deltaTime * (this.onFloor ? 25 : this.SPEED) // 每个时间点速度的改变值
-    const rotateAngle = Math.PI / 2
 
     if (this.keyStates['KeyW']) {
       this.mixer!.clipAction(this.clips![10]).play()
@@ -165,11 +166,9 @@ class Robot {
     } else {
       this.mixer!.stopAllAction()
     }
+
     if (this.keyStates['KeyS']) {
       this.velocity.add(this.getForwardVector().multiplyScalar(-speedDelta))
-      this.robot!.lookAt(this.ctx.ctx.camera!.position.clone().setY(0).setZ(0))
-      // this.robot!.rotateOnWorldAxis(this.direction, rotateAngle)
-      // this.ctx.ctx.camera?.getWorldDirection()
     }
     if (this.keyStates['KeyA']) {
       this.velocity.add(this.getSideVector().multiplyScalar(-speedDelta))
@@ -215,6 +214,35 @@ class Robot {
 
     this.playerCollisions() // 位移后进行碰撞检查
     this.ctx.ctx.camera?.matrix.copy(this.trans)
+  }
+
+  public updateLookDirection() {
+    // if(this.keyStates['KeyA']) {
+    //   if(this.keyStates['KeyA']) {
+
+    //   }
+    // }
+
+    if (this.keyStates['KeyS']) {
+      if (this.keyStates['KeyA']) {
+        if (this.lookDirection !== 1) {
+          this.robot!.rotateY(this.ctx.ctx.controls!.getAzimuthalAngle() - (Math.PI / 4))
+          this.lookDirection = 1
+        }
+      } else if (this.keyStates['KeyD']) {
+        if (this.lookDirection !== 3) {
+          this.robot!.rotateY(this.ctx.ctx.controls!.getAzimuthalAngle() + (Math.PI / 4))
+          this.lookDirection = 3
+        }
+      } else {
+        if (this.lookDirection !== 2) {
+          this.robot!.rotateY(this.ctx.ctx.controls!.getAzimuthalAngle())
+          this.lookDirection = 2
+        }
+      }
+
+
+    }
   }
 
   private playerCollisions() {
@@ -305,6 +333,7 @@ export default class World {
 
     this.robot.handleControls(deltaTime)
     this.robot.updatePlayer(deltaTime)
+    this.robot.updateLookDirection()
 
     this.robot.robot!.position.copy(this.robot.geometry.start.clone()).add(new Vector3(0, -1.5, 0))
     // this.robot.robot!.position.setY(0)

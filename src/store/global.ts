@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 interface GlobalState {
   env: any
   host: string
+  loading: boolean
 }
 
 export const useGlobal = defineStore({
@@ -10,7 +11,8 @@ export const useGlobal = defineStore({
   state(): GlobalState {
     return {
       env: import.meta.env,
-      host: import.meta.env.VITE_HOST
+      host: import.meta.env.VITE_HOST,
+      loading: true
     }
   },
   getters: {
