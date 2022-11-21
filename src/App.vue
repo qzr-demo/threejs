@@ -3,7 +3,7 @@
  * @Description  :
  * @Autor        : Qzr(z5021996@vip.qq.com)
  * @LastEditors  : Qzr(z5021996@vip.qq.com)
- * @LastEditTime : 2022-11-10 17:46:48
+ * @LastEditTime : 2022-11-21 16:58:50
 -->
 
 
@@ -74,5 +74,18 @@ body {
 .slide-left-enter-active,
 .slide-left-leave-active {
 	transition: all 0.3s;
+}
+
+#loading {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  background: black;
+  top: 0;
+  z-index: 99999;
+  color: white;
+  text-align: center;
+  line-height: 100vh;
+  font-size: 50px;
 }
 </style>

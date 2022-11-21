@@ -1,15 +1,9 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min'
-import Torus from './initTorus'
 import Robot from './initRobot'
-import Game from './initGame'
-import Drop from './initDrop'
-import Cube from './initCube'
-import RaycasterMesh from './initRaycast'
 import Cannon from './cannon'
 import Stats from 'three/examples/jsm/libs/stats.module.js'
-import FirstPerson from './firstPerson'
 import ThirdPerson from './thirdPerson'
 
 export default class Three {
@@ -49,24 +43,18 @@ export default class Three {
 
     this.initEvent()
 
-    // this.initFloor()
+    this.initFloor()
 
     // 控制器 需在相机之后创建
-    // this.initControls()
-    // this.initGUI()
+    this.initControls()
+    this.initGUI()
     this.initAxesHelper()
 
 
 
-    // const torus = new Torus(this)
-    // const raycast = new RaycasterMesh(this)
-    // const cube = new Cube(this)
-    // const dorp = new Drop(this)
-    // const game = new Game(this)
     // const robot = new Robot(this)
     // const cannon = new Cannon(this)
-    const firstPerson = new FirstPerson(this)
-    // const thirdPerson = new ThirdPerson(this)
+    const thirdPerson = new ThirdPerson(this)
   }
 
   protected initFloor() { // 生成地板
@@ -87,10 +75,8 @@ export default class Three {
     // 参数三四 轴向视距 看到的最近和最远的距离
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     // 设定相机原点
-    // this.camera.position.set(-5, 3, 10)
-    // this.camera.lookAt(0, 0, 0)
-
-
+    this.camera.position.set(-5, 3, 10)
+    this.camera.lookAt(0, 0, 0)
   }
 
   protected initRenderer() {  // 创建渲染器

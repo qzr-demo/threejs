@@ -106,6 +106,8 @@ class Robot {
     }
     if (this.keyStates['KeyS']) {
       this.velocity.add(this.getForwardVector().multiplyScalar(-speedDelta))
+
+      this.robot?.lookAt(this.ctx.cameradirection)
     }
     if (this.keyStates['KeyA']) {
       this.velocity.add(this.getSideVector().multiplyScalar(-speedDelta))
@@ -114,7 +116,6 @@ class Robot {
       this.velocity.add(this.getSideVector().multiplyScalar(speedDelta))
     }
     if (this.keyStates['Space'] && this.onFloor) {
-      this.mixer!.clipAction(this.clips![3]).setLoop(THREE.LoopPingPong, 1).play().reset()
       this.velocity.y = 20
     }
   }
@@ -176,6 +177,8 @@ export default class World {
 
   robot: Robot = new Robot(this)
   sceneOctree: Octree = new Octree()
+
+  cameradirection: Vector3 = new Vector3()
 
   constructor(ctx:Three) {
     this.ctx = ctx
@@ -247,6 +250,8 @@ export default class World {
 
     // this.robot.robot!.position.copy(this.robot.geometry.start)
     // this.robot.robot!.quaternion.copy(this.robot.geometry.end)
+
+    this.ctx.camera?.getWorldDirection(this.cameradirection)
 
     this.robot!.mixer?.update(deltaTime)
     // 相机跟随

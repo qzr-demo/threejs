@@ -3,15 +3,15 @@
  * @Description  :
  * @Autor        : Qzr(z5021996@vip.qq.com)
  * @LastEditors  : Qzr(z5021996@vip.qq.com)
- * @LastEditTime : 2022-11-18 17:45:46
+ * @LastEditTime : 2022-11-21 16:58:46
 -->
 
 <template>
   <div id="box"
        ref="box" />
 
-  <div v-if="globalStore.loading"
-       id="loading">Loading...</div>
+  <!-- <div v-if="globalStore.loading"
+       id="loading">Loading...</div> -->
 </template>
 
 <script lang="ts" setup>
@@ -30,16 +30,5 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-#loading {
-  width: 100vw;
-  height: 100vh;
-  position: fixed;
-  background: black;
-  top: 0;
-  z-index: 99999;
-  color: white;
-  text-align: center;
-  line-height: 100vh;
-  font-size: 50px;
-}
+
 </style>
